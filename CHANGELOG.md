@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2023-04-02
+
+[985b498](985b498dadfbcfbceedd2e760e8a59ba5677fce9)...[5c5926b](5c5926b013ec4456e74c853e9dcb0a5e873d81f0)
+
+### Bug Fixes
+
+- Fix gh ([cc12dab](cc12dab59e1b6db8c6a4110e4536d06328cf8207) - 2023-04-02 by Tyr Chen)
+
+### Miscellaneous Tasks
+
+- Better documentation ([5c5926b](5c5926b013ec4456e74c853e9dcb0a5e873d81f0) - 2023-04-02 by Tyr Chen)
+
 ## [0.2.0] - 2023-04-02
 
 ### Features
