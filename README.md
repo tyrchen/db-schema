@@ -22,7 +22,7 @@ The module provides a `PgSchema` struct that accepts a namespace (schema name) a
 rust
 
 ```rust
-use your_module_name::PgSchema;
+use db_schema::PgSchema;
 
 let schema = PgSchema::new("your_schema_name");
 ```
@@ -66,7 +66,7 @@ Here's an example of how to retrieve the SQL statements for all schema objects i
 rust
 
 ```rust
-use your_module_name::PgSchema;
+use db_schema::PgSchema;
 use sqlx::PgPool;
 
 async fn generate_sql_statements_for_schema(pool: &PgPool) -> Result<(), sqlx::Error> {

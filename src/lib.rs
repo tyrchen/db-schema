@@ -5,7 +5,7 @@
 //!
 //! Example usage:
 //! ```
-//! use crate::PgSchema;
+//! use db_schema::PgSchema;
 //!
 //! let schema = PgSchema::new("my_schema");
 //! let pool = get_pg_pool(); // Function to get a connection pool
