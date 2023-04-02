@@ -1,3 +1,4 @@
+--- The following test tables are created by ChatGPT
 CREATE SCHEMA gpt;
 
 CREATE TYPE gpt.login_method AS ENUM (
