@@ -1,0 +1,21 @@
+[package]
+name = "db-schema"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["db-postgres"]
+db-all = ["db-postgres", "db-mysql", "db-sqlite"]
+db-postgres = ["sqlx/postgres", "paste"]
+db-mysql = ["sqlx/mysql", "paste"]
+db-sqlite = ["sqlx/sqlite", "paste"]
+
+[dependencies]
+paste = { version = "1.0.12", optional = true }
+sqlx = { version = "0.6.3", features = ["runtime-tokio-rustls"], optional = true }
+
+[dev-dependencies]
+anyhow = "1.0.70"
+sqlx = { version = "0.6.3", features = ["postgres", "runtime-tokio-rustls"] }
+sqlx-db-tester = "0.3.6"
+tokio = { version = "1.27.0", features = ["rt", "rt-multi-thread", "macros"] }
