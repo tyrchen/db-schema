@@ -3,17 +3,21 @@ use paste::paste;
 #[cfg(feature = "db-postgres")]
 use sqlx::PgPool;
 
+/// A struct representing a PostgreSQL schema.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct PgSchema {
     namespace: String,
 }
 
 impl PgSchema {
+    /// Create a new `PgSchema` instance.
     pub fn new(namespace: impl Into<String>) -> Self {
         Self {
             namespace: namespace.into(),
         }
     }
 
+    /// Generates a SQL statement for creating all enum types in the schema.
     pub fn enums(&self) -> String {
         format!("SELECT
       'CREATE TYPE ' || n.nspname || '.' || t.typname || ' AS ENUM (' || string_agg(quote_literal(e.enumlabel), ', ') || ');' AS sql
@@ -28,6 +32,7 @@ impl PgSchema {
       n.nspname, t.typname;", self.namespace)
     }
 
+    /// Generates a SQL statement for creating all composite types in the schema.
     pub fn types(&self) -> String {
         format!("SELECT
       'CREATE TYPE ' || n.nspname || '.' || t.typname || ' AS (' || string_agg(a.attname || ' ' || pg_catalog.format_type(a.atttypid, a.atttypmod), ', ') || ');' AS sql
@@ -44,6 +49,7 @@ impl PgSchema {
       n.nspname, t.typname;", self.namespace)
     }
 
+    /// Generates a SQL statement for creating all tables in the schema.
     pub fn tables(&self) -> String {
         format!("WITH table_columns AS (
           SELECT
@@ -128,6 +134,7 @@ impl PgSchema {
           create_table_statements;", self.namespace)
     }
 
+    /// Generates a SQL statement for creating all views in the schema.
     pub fn views(&self) -> String {
         format!(
             "SELECT
@@ -142,6 +149,7 @@ impl PgSchema {
         )
     }
 
+    /// Generates a SQL statement for creating all materialized views in the schema.
     pub fn mviews(&self) -> String {
         format!("SELECT
         'CREATE MATERIALIZED VIEW ' || n.nspname || '.' || c.relname || ' AS ' || pg_get_viewdef(c.oid) AS sql
@@ -153,6 +161,7 @@ impl PgSchema {
         AND n.nspname = '{}';", self.namespace)
     }
 
+    /// Generates a SQL statement for creating all functions in the schema.
     pub fn functions(&self) -> String {
         format!("SELECT
       'CREATE OR REPLACE FUNCTION ' || n.nspname || '.' || p.proname || '(' || pg_get_function_arguments(p.oid) || ') RETURNS '
@@ -166,6 +175,7 @@ impl PgSchema {
       AND p.prokind = 'f';", self.namespace)
     }
 
+    /// Generates a SQL statement for creating all triggers in the schema.
     pub fn triggers(&self) -> String {
         format!(
             "SELECT
@@ -196,6 +206,7 @@ impl PgSchema {
         )
     }
 
+    /// Generates a SQL statement for creating all indexes in the schema.
     pub fn indexes(&self) -> String {
         format!("SELECT indexdef || ';' AS sql FROM pg_indexes WHERE schemaname = '{}' ORDER BY tablename, indexname;", self.namespace)
     }
@@ -203,7 +214,7 @@ impl PgSchema {
 
 #[cfg(feature = "db-postgres")]
 #[derive(sqlx::FromRow)]
-pub struct SchemaRet {
+struct SchemaRet {
     sql: String,
 }
 
@@ -212,6 +223,16 @@ macro_rules! gen_fn {
   ($($name:ident),*) => {
       $(
         paste! {
+          /// Async function that fetches the SQL statements for $name for the specified schema item.
+          ///
+          /// Example usage:
+          /// ```
+          /// use crate::PgSchema;
+          ///
+          /// let schema = PgSchema::new("my_schema");
+          /// let pool = get_pg_pool(); // Function to get a connection pool
+          /// let sqls = schema.[<get_ $name>](&pool).await.unwrap();
+          /// ```
           pub async fn [<get_ $name>] (&self, pool: &PgPool) -> Result<Vec<String>, sqlx::Error> {
               let sql = self.$name();
               let ret: Vec<SchemaRet> = sqlx::query_as(&sql).fetch_all(pool).await?;
