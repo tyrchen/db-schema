@@ -1,7 +1,17 @@
 [package]
 name = "db-schema"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
+license = "MIT"
+documentation = "https://docs.rs/db-schema"
+repository = "https://github.com/tyrchen/db-schema"
+homepage = "https://github.com/tyrchen/db-schema"
+description = """
+A simple library to retrieve schema information from database.
+"""
+readme = "README.md"
+categories = ["development-tools"]
+keywords = ["sqlx", "postgres", "database", "schema"]
 
 [features]
 default = ["db-postgres"]
