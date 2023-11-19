@@ -53,85 +53,81 @@ impl PgSchema {
     pub fn tables(&self) -> String {
         format!("WITH table_columns AS (
           SELECT
-            n.nspname AS schema_name,
-            c.relname AS table_name,
-            a.attname AS column_name,
-            pg_catalog.format_type(a.atttypid, a.atttypmod) AS column_type,
-            a.attnotnull AS is_not_null,
-            a.attnum AS column_position
+              n.nspname AS schema_name,
+              c.relname AS table_name,
+              a.attname AS column_name,
+              pg_catalog.format_type(a.atttypid, a.atttypmod) AS column_type,
+              a.attnotnull AS is_not_null,
+              a.attnum AS column_position
           FROM
-            pg_catalog.pg_attribute a
-            JOIN pg_catalog.pg_class c ON a.attrelid = c.oid
-            JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+              pg_catalog.pg_attribute a
+              JOIN pg_catalog.pg_class c ON a.attrelid = c.oid
+              JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid
           WHERE
-            a.attnum > 0
-            AND NOT a.attisdropped
-            AND n.nspname = '{0}'
-            AND c.relkind = 'r'
-        ),
-        table_constraints AS (
+              a.attnum > 0
+              AND NOT a.attisdropped
+              AND n.nspname = '{0}'
+              AND c.relkind = 'r'
+      ),
+      constraint_columns AS (
           SELECT
-            tc.constraint_name,
-            tc.table_schema,
-            tc.table_name,
-            kcu.column_name,
-            tc.constraint_type
+              tc.table_schema,
+              tc.table_name,
+              tc.constraint_name,
+              tc.constraint_type,
+              string_agg(kcu.column_name, ', ') AS columns
           FROM
-            information_schema.table_constraints tc
-            JOIN information_schema.key_column_usage kcu
-              ON tc.constraint_catalog = kcu.constraint_catalog
-              AND tc.constraint_schema = kcu.constraint_schema
-              AND tc.constraint_name = kcu.constraint_name
+              information_schema.table_constraints tc
+              JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
           WHERE
-            tc.constraint_type IN ('PRIMARY KEY', 'FOREIGN KEY', 'UNIQUE')
-            AND tc.table_schema = '{0}'
-        ),
-        formatted_columns AS (
-          SELECT
-            tc.schema_name,
-            tc.table_name,
-            tc.column_name,
-            tc.column_type,
-            tc.is_not_null,
-            tc.column_position,
-            STRING_AGG(
-              tcs.constraint_type || ' (' || tc.column_name || ')',
-              ', '
-              ORDER BY tcs.constraint_type DESC
-            ) AS column_constraints
-          FROM
-            table_columns tc
-            LEFT JOIN table_constraints tcs
-              ON tc.schema_name = tcs.table_schema
-              AND tc.table_name = tcs.table_name
-              AND tc.column_name = tcs.column_name
+              tc.table_schema = '{0}'
+              AND tc.constraint_type IN ('PRIMARY KEY', 'FOREIGN KEY', 'UNIQUE')
           GROUP BY
-            tc.schema_name,
-            tc.table_name,
-            tc.column_name,
-            tc.column_type,
-            tc.is_not_null,
-            tc.column_position
-        ),
-        create_table_statements AS (
+              tc.table_schema,
+              tc.table_name,
+              tc.constraint_name,
+              tc.constraint_type
+      ),
+      table_constraints AS (
           SELECT
-            fc.schema_name,
-            fc.table_name,
-            STRING_AGG(
-              fc.column_name || ' ' || fc.column_type || (CASE WHEN fc.is_not_null THEN ' NOT NULL' ELSE '' END) || COALESCE(' ' || fc.column_constraints, ''),
-              ', '
-              ORDER BY fc.column_position
-            ) AS formatted_columns
+              cc.table_schema,
+              cc.table_name,
+              string_agg(cc.constraint_type || ' (' || cc.columns || ')', ', ' ORDER BY cc.constraint_type) AS constraints
           FROM
-            formatted_columns fc
+              constraint_columns cc
           GROUP BY
-            fc.schema_name,
-            fc.table_name
-        )
-        SELECT
-          'CREATE TABLE ' || schema_name || '.' || table_name || ' (' || formatted_columns || ');' AS sql
-        FROM
-          create_table_statements;", self.namespace)
+              cc.table_schema,
+              cc.table_name
+      ),
+      formatted_columns AS (
+          SELECT
+              tc.schema_name,
+              tc.table_name,
+              STRING_AGG(
+                  tc.column_name || ' ' || tc.column_type || (CASE WHEN tc.is_not_null THEN ' NOT NULL' ELSE '' END),
+                  ', ' ORDER BY tc.column_position
+              ) AS formatted_columns
+          FROM
+              table_columns tc
+          GROUP BY
+              tc.schema_name,
+              tc.table_name
+      ),
+      create_table_statements AS (
+          SELECT
+              fc.schema_name,
+              fc.table_name,
+              'CREATE TABLE ' || fc.schema_name || '.' || fc.table_name || ' (' || fc.formatted_columns ||
+              (CASE WHEN tc.constraints IS NOT NULL THEN ', ' || tc.constraints ELSE '' END) || ');' AS create_statement
+          FROM
+              formatted_columns fc
+              LEFT JOIN table_constraints tc ON fc.schema_name = tc.table_schema AND fc.table_name = tc.table_name
+      )
+      SELECT
+          create_statement
+      FROM
+          create_table_statements;
+      ", self.namespace)
     }
 
     /// Generates a SQL statement for creating all views in the schema.
