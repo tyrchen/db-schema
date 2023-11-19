@@ -124,7 +124,7 @@ impl PgSchema {
               LEFT JOIN table_constraints tc ON fc.schema_name = tc.table_schema AND fc.table_name = tc.table_name
       )
       SELECT
-          create_statement
+          create_statement as sql
       FROM
           create_table_statements;
       ", self.namespace)
